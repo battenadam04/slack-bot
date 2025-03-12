@@ -1,33 +1,26 @@
 import os
 import json
-from slack_sdk import WebClient
-from slack_sdk.signature import SignatureVerifier
+from slack_bolt import App
+from slack_bolt.adapter.vercel import VercelAdapter
 
-SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
-SLACK_SIGNING_SECRET = os.environ.get("SLACK_SIGNING_SECRET")
-slack_client = WebClient(token=SLACK_BOT_TOKEN)
-verifier = SignatureVerifier(SLACK_SIGNING_SECRET)
+app = App(
+    token=os.environ.get("SLACK_BOT_TOKEN"),
+    signing_secret=os.environ.get("SLACK_SIGNING_SECRET")
+)
 
-async def handler(req, res):
-    # Verify the request signature
-    if not verifier.is_valid_request(
-        req.headers, req.body.read()
-    ):
-        return res.status(400).send("Invalid request")
+@app.event("message")
+def handle_message_events(body, logger):
+    logger.info(body)
+    event = body.get("event", {})
 
-    # Parse the request body
-    data = json.loads(req.body.decode('utf-8'))
-
-    # Handle the challenge request
-    if "challenge" in data:
-        return res.status(200).send(data["challenge"])
-
-    # Process events (only for message events in this example)
-    event = data.get("event")
-    if event and event.get("type") == "message" and not event.get("subtype"):
+    if event.get("subtype") is None and "text" in event:
         channel_id = event.get("channel")
+        user_id = event.get("user")
         text = event.get("text")
-        if text:
-            slack_client.chat_postMessage(channel=channel_id, text=f"You said: {text}")
+        app.client.chat_postMessage(channel=channel_id, text=f"Hello <@{user_id}>! You said: {text}")
 
-    return res.status(200).send("")
+# Initialize the Vercel adapter
+vercel_adapter = VercelAdapter(app)
+
+# Export the handler function for Vercel
+handler = vercel_adapter.handler
