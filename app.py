@@ -8,9 +8,22 @@ from slack_sdk.signature import SignatureVerifier  # Import the signature verifi
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 SLACK_SIGNING_SECRET = os.environ.get("SLACK_SIGNING_SECRET")
 
-# Initialize Slack client and signature verifier
-slack_client = WebClient(token=SLACK_BOT_TOKEN)
-verifier = SignatureVerifier(SLACK_SIGNING_SECRET)
+
+async def handler(req, res):
+    # Initialize Slack client and signature verifier
+    slack_client = WebClient(token=SLACK_BOT_TOKEN)
+    verifier = SignatureVerifier(SLACK_SIGNING_SECRET)
+
+    data = json.loads(req.body.decode('utf-8'))
+
+    if "challenge" in data:
+        # Correctly respond to the challenge request
+        return res.status_code(200).send(data["challenge"]) 
+
+    # ... (rest of your event handling logic)
+
+    # Return a 200 OK response for successful event processing
+    return res.status_code(200).send("") 
 
 # Define a custom request handler class
 class SlackRequestHandler(http.server.BaseHTTPRequestHandler):
