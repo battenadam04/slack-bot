@@ -27,26 +27,25 @@ app = Flask(__name__)
 # The route for the Slack events
 @app.route('/api/slack/events', methods=['POST'])
 def slack_events():
-    data = request.get_data()
-    parsed_data = parse_qs(data.decode())
+    # Check for JSON payload first
+    if request.content_type == 'application/json':
+        data = request.get_json()
+        if data.get("type") == "url_verification":
+            challenge_response = {
+                "challenge": data.get("challenge")
+            }
+            return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
 
-    if "challenge" in parsed_data:
-        # --- Challenge Handling Block ---
-        try:
+    # If not JSON, try parsing as URL-encoded
+    else: 
+        data = request.get_data()
+        parsed_data = parse_qs(data.decode())
+        if "challenge" in parsed_data:
             challenge_response = {
                 "challenge": parsed_data["challenge"][0]
             }
-            logging.info(f"Challenge Response: {challenge_response}")
             return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
 
-        except Exception as e:
-            # Log the error for debugging
-            logging.error(f"Error handling challenge: {e}")
-            # Return a 400 error if the challenge handling fails
-            return jsonify({"error": "Challenge handling failed"}), 400 
-
-    # --- Other Request Handling (only if not a challenge) ---
-    else:
         # ... (Your existing code for signature verification and event handling)
         # This block will ONLY execute if the request is NOT a challenge request
         return jsonify({'status': 'processed_non_challenge'}), 201 
