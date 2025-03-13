@@ -37,7 +37,8 @@ def slack_events():
         challenge_response = {
             "challenge": parsed_data["challenge"][0]  # Access the value from the list
         }
-        return jsonify(challenge_response).encode(), 200
+        return jsonify(challenge_response).encode('utf-8'), 200, {'Content-Type': 'application/json'} 
+
     
     # Verification should happen before data processing
     if not signature_verifier.is_valid_request(data, request.headers): 
