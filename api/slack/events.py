@@ -29,6 +29,13 @@ app = Flask(__name__)
 def slack_events():
     # It's generally safer to access request data directly
     data = request.get_data() 
+
+       # Check for URL verification challenge
+    if request.content_type == "application/json":
+        event = request.get_json()
+        if event.get("type") == "url_verification":
+            return jsonify({"challenge": event.get("challenge")}), 200
+
     
     # Verification should happen before data processing
     if not signature_verifier.is_valid_request(data, request.headers): 
