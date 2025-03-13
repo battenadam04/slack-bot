@@ -50,7 +50,7 @@ def slack_events():
     else: 
         event_data = request.json
         event = event_data.get('event')
-        return jsonify({'status': 'ok'}), 200 
+        return jsonify({'status': 'ok'}), 201 
 
 if __name__ == "__main__":
     app.run(port=3000) 
