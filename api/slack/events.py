@@ -5,6 +5,7 @@ from slack_sdk.errors import SlackApiError
 import os
 from dotenv import load_dotenv
 from urllib.parse import parse_qs
+import logging
 
 # Load environment variables
 load_dotenv('.env.development.local') 
@@ -35,8 +36,11 @@ def slack_events():
     # Check for the challenge in the parsed data
     if "challenge" in parsed_data:
         challenge_response = {
-            "challenge": parsed_data["challenge"][0]  # Access the value from the list
+            "challenge": parsed_data["challenge"] # Access the value from the list
         }
+        # Log the challenge response
+        logging.info(f"Challenge Response: {challenge_response}") 
+        
         return jsonify(challenge_response).encode('utf-8'), 200, {'Content-Type': 'application/json'} 
 
     
