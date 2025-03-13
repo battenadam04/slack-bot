@@ -34,7 +34,7 @@ def slack_events():
         # --- Challenge Handling Block ---
         try:
             challenge_response = {
-                "challenge": parsed_data["challenge"]
+                "challenge": parsed_data["challenge"][0]
             }
             logging.info(f"Challenge Response: {challenge_response}")
             return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
