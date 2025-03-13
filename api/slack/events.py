@@ -2,10 +2,9 @@ from flask import Flask, request, jsonify
 from slack_sdk import WebClient
 from slack_sdk.signature import SignatureVerifier
 from slack_sdk.errors import SlackApiError
-import json
 import os
 from dotenv import load_dotenv
-from urllib.parse import unquote_plus
+from urllib.parse import parse_qs
 
 # Load environment variables
 load_dotenv('.env.development.local') 
@@ -30,8 +29,15 @@ def slack_events():
     # It's generally safer to access request data directly
     data = request.get_data() 
 
-    if "challenge" in data:
-        return jsonify({"challenge": data.get("challenge")}).encode(), 200
+    # Parse URL-encoded data
+    parsed_data = parse_qs(data.decode()) 
+
+    # Check for the challenge in the parsed data
+    if "challenge" in parsed_data:
+        challenge_response = {
+            "challenge": parsed_data["challenge"][0]  # Access the value from the list
+        }
+        return jsonify(challenge_response).encode(), 200
     
     # Verification should happen before data processing
     if not signature_verifier.is_valid_request(data, request.headers): 
