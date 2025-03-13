@@ -31,7 +31,7 @@ def slack_events():
     data = request.get_data() 
 
     if "challenge" in data:
-        return jsonify({"challenge": data.get("challenge")}), 200
+        return jsonify({"challenge": data.get("challenge")}).encode(), 200
     
     # Verification should happen before data processing
     if not signature_verifier.is_valid_request(data, request.headers): 
