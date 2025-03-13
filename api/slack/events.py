@@ -29,26 +29,30 @@ app = Flask(__name__)
 def slack_events():
     # Check for JSON payload first
     if request.content_type == 'application/json':
-        data = request.get_json()
-        if data.get("type") == "url_verification":
-            challenge_response = {
-                "challenge": data.get("challenge")
-            }
-            return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
-
-    # If not JSON, try parsing as URL-encoded
-    else: 
         data = request.get_data()
-        parsed_data = parse_qs(data.decode())
-        if "challenge" in parsed_data:
-            challenge_response = {
-                "challenge": parsed_data["challenge"][0]
-            }
-            return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
+    if not signature_verifier.is_valid_request(data, request.headers):
+        return jsonify({'status': 'invalid_request'}), 403
 
-        # ... (Your existing code for signature verification and event handling)
-        # This block will ONLY execute if the request is NOT a challenge request
-        return jsonify({'status': 'processed_non_challenge'}), 201 
+    if request.content_type == 'application/json':
+        event = request.get_json()
+        if event.get("type") == "event_callback":
+            event_type = event.get("event", {}).get("type")
+            user_name = event.get("event", {}).get("user", {}).get("username")
+
+            if event_type == "message" and user_name:
+                try:
+                    web_client.chat_postMessage(
+                        channel=event["event"]["channel"],
+                        text=f"Hello @{user_name}!"
+                    )
+                    return jsonify({'status': 'ok'}), 200
+                except SlackApiError as e:
+                    logging.error(f"Error sending message: {e}")
+                    return jsonify({"status": "error", "message": str(e)}), 500
+            else:
+                logging.info("Ignoring non-message event or missing user_name.")
+
+    return jsonify({'status': 'processed_non_challenge'}), 201
 
 if __name__ == "__main__":
     app.run(port=3000)
