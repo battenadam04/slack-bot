@@ -42,7 +42,10 @@ def slack_events():
     # Verification should happen before data processing
     if not signature_verifier.is_valid_request(data, request.headers): 
         return jsonify({'status': 'invalid_request'}), 403
-
+    else: 
+        event_data = request.json
+        event = event_data.get('event')
+        return jsonify({'status': 'ok'}), 200 
 
 if __name__ == "__main__":
     app.run(port=3000) 
