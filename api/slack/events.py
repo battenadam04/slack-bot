@@ -75,7 +75,7 @@ def slack_events():
                 logging.error(f"Error responding to message: {e}")
                 return jsonify({"status": "error", "message": str(e)}), 500
 
-    return jsonify({'status': 'event_not_processed'}), 200  
+    return jsonify({'status': 'event_not_processed'}), 400  
 
 
 if __name__ == "__main__":
