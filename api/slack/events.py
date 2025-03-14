@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 from slack_sdk import WebClient
 from slack_sdk.signature import SignatureVerifier
 from slack_sdk.errors import SlackApiError
@@ -10,16 +10,20 @@ import logging
 # Load environment variables
 load_dotenv('.env.development.local') 
 
-# Setup the WebClient and the SignatureVerifier
+SLACK_CLIENT_ID = os.getenv("SLACK_CLIENT_ID")
+SLACK_CLIENT_SECRET = os.getenv("SLACK_SIGNING_SECRET")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET")
+SLACK_AUTH_SECRET=os.getenv("SLACK_AUTH_SECRET")
 web_client = WebClient(token=SLACK_BOT_TOKEN)
 signature_verifier = SignatureVerifier(SLACK_SIGNING_SECRET)
 
-if SLACK_BOT_TOKEN is None or SLACK_SIGNING_SECRET is None:
-    print("Environment variables not set") 
-else:
-    print("Environment variables are set")
+# OAuth flow URLs
+SLACK_OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
+SLACK_OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
+
+if any(var is None for var in [SLACK_CLIENT_ID, SLACK_CLIENT_SECRET, SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET]):
+    print("Error: Environment variables not set correctly.")
 
 # Create a new Flask web server
 app = Flask(__name__)
@@ -27,33 +31,46 @@ app = Flask(__name__)
 # The route for the Slack events
 @app.route('/api/slack/events', methods=['POST'])
 def slack_events():
-    # Check for JSON payload first
+    challenge_response = {"challenge": ''}
+
     if request.content_type == 'application/json':
         data = request.get_json()
-        if data.get("type") == "url_verification":
-            challenge_response = {
-                "challenge": data.get("challenge")
-            }
-            return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
 
-    # If not JSON, try parsing as URL-encoded
-    else: 
-        data = request.get_data()
-        parsed_data = parse_qs(data.decode())
-        if "challenge" in parsed_data:
-            challenge_response = {
-                "challenge": parsed_data["challenge"][0]
-            }
-            return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
+        # if data.get("type") == "url_verification":
+        #     challenge_response = {"challenge": data.get("challenge")}
+        #     return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
 
-        # ... (Your existing code for signature verification and event handling)
-        # This block will ONLY execute if the request is NOT a challenge request
-        return jsonify({'status': 'processed_non_challenge'}), 201 
-    
-@app.message("hello")
-def message_hello(message, say):
-    # say() sends a message to the channel where the event was triggered
-    say(f"Hey there <@{message['user']}>!")
+        if data.get("type") == "event_callback":
+            event_type = data.get("event", {}).get("type")
+            user_id = data.get("event", {}).get("user")
+            text = data.get("event", {}).get("text", "").lower()
+            channel_id = data.get("event", {}).get("channel")
+
+        # Respond to "hello" in any channel or DM
+        if event_type == "message" and text == "hello":
+            try:
+                # Log user_id before fetching user info
+                logging.info(f"User ID: {user_id}") 
+
+                user_info = web_client.users_info(user=user_id)
+                user_name = user_info["user"]["real_name"]
+
+                # Log user_name and channel_id before sending the message
+                logging.info(f"User Name: {user_name}")
+                logging.info(f"Channel ID: {channel_id}")
+
+                web_client.chat_postMessage(
+                    channel=channel_id,
+                    text=f"Hello, {user_name}! Nice one, I work as expected."
+                )
+                return jsonify({'status': 'ok'}), 200
+
+            except SlackApiError as e:
+                logging.error(f"Error responding to message: {e}")
+                return jsonify({"status": "error", "message": str(e)}), 500
+
+    return jsonify({'status': 'event_not_processed'}), 200  
+
 
 if __name__ == "__main__":
     app.run(port=3000)
