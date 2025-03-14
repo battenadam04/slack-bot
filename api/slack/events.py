@@ -11,16 +11,12 @@ import logging
 load_dotenv('.env.development.local') 
 
 SLACK_CLIENT_ID = os.getenv("SLACK_CLIENT_ID")
-SLACK_CLIENT_SECRET = os.getenv("SLACK_SIGNING_SECRET")
+SLACK_CLIENT_SECRET = os.getenv("SLACK_CLIENT_SECRET")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET")
 SLACK_AUTH_SECRET=os.getenv("SLACK_AUTH_SECRET")
 web_client = WebClient(token=SLACK_BOT_TOKEN)
 signature_verifier = SignatureVerifier(SLACK_SIGNING_SECRET)
-
-# OAuth flow URLs
-SLACK_OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
-SLACK_OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
 
 if any(var is None for var in [SLACK_CLIENT_ID, SLACK_CLIENT_SECRET, SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET]):
     print("Error: Environment variables not set correctly.")
@@ -31,15 +27,24 @@ app = Flask(__name__)
 # The route for the Slack events
 @app.route('/api/slack/events', methods=['POST'])
 def slack_events():
-    challenge_response = {"challenge": ''}
 
+      # --- Signature Verification ---
+    request_body = request.get_data()
+    slack_signature = request.headers['X-Slack-Signature']
+    timestamp = request.headers['X-Slack-Request-Timestamp']
+
+    if not signature_verifier.is_valid_request(request_body, slack_signature, timestamp):
+        return jsonify({'status': 'invalid_request'}), 403
+    
+     # --- Challenge Handling ---
     if request.content_type == 'application/json':
         data = request.get_json()
 
-        # if data.get("type") == "url_verification":
-        #     challenge_response = {"challenge": data.get("challenge")}
-        #     return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
+        if data.get("type") == "url_verification":
+            challenge_response = {"challenge": data.get("challenge")}
+            return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
 
+         # --- Event Handling ---
         if data.get("type") == "event_callback":
             event_type = data.get("event", {}).get("type")
             user_id = data.get("event", {}).get("user")
