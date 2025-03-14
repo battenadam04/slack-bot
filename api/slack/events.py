@@ -34,23 +34,26 @@ def slack_events():
     timestamp = request.headers['X-Slack-Request-Timestamp']
 
     # Correct way to call is_valid_request:
-    # if not signature_verifier.is_valid_request(request_body, slack_signature, timestamp):
-    #     return jsonify({'status': 'invalid_request'}), 403
+    if not signature_verifier.is_valid_request(request_body, slack_signature, timestamp):
+        return jsonify({'status': 'invalid_request'}), 403
     
      # --- Challenge Handling ---
-    data = request.get_json()
+    if request.content_type == 'application/json':
+        data = request.get_json()
 
-        # if data.get("type") == "url_verification":
-        #     challenge_response = {"challenge": data.get("challenge")}
-        #     return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
-    event_type = data.get("event", {}).get("type")
-    user_id = data.get("event", {}).get("user")
-    text = data.get("event", {}).get("text", "").lower()
-    channel_id = data.get("event", {}).get("channel")
+        if data.get("type") == "url_verification":
+            challenge_response = {"challenge": data.get("challenge")}
+            return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
 
          # --- Event Handling ---
-    if event_type == "message" and text == "hello":
+        if data.get("type") == "event_callback":
+            event_type = data.get("event", {}).get("type")
+            user_id = data.get("event", {}).get("user")
+            text = data.get("event", {}).get("text", "").lower()
+            channel_id = data.get("event", {}).get("channel")
+
         # Respond to "hello" in any channel or DM
+        if event_type == "message" and text == "hello":
             try:
                 # Log user_id before fetching user info
                 logging.info(f"User ID: {user_id}") 
