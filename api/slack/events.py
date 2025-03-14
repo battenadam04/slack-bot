@@ -38,22 +38,21 @@ def slack_events():
     #     return jsonify({'status': 'invalid_request'}), 403
     
      # --- Challenge Handling ---
-    if request.content_type == 'application/json':
-        data = request.get_json()
+    data = request.get_json()
 
-        if data.get("type") == "url_verification":
-            challenge_response = {"challenge": data.get("challenge")}
-            return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
+        # if data.get("type") == "url_verification":
+        #     challenge_response = {"challenge": data.get("challenge")}
+        #     return jsonify(challenge_response), 200, {'Content-Type': 'application/json'}
 
          # --- Event Handling ---
-        if data.get("type") == "event_callback":
+    if data.get("type") == "event_callback":
             event_type = data.get("event", {}).get("type")
             user_id = data.get("event", {}).get("user")
             text = data.get("event", {}).get("text", "").lower()
             channel_id = data.get("event", {}).get("channel")
 
         # Respond to "hello" in any channel or DM
-        if event_type == "message" and text == "hello":
+    if event_type == "message" and text == "hello":
             try:
                 # Log user_id before fetching user info
                 logging.info(f"User ID: {user_id}") 
