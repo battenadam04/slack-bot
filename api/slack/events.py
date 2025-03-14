@@ -53,27 +53,27 @@ def slack_events():
             channel_id = data.get("event", {}).get("channel")
 
         # Respond to "hello" in any channel or DM
-        if event_type == "message" and text == "hello":
-            try:
-                # Log user_id before fetching user info
-                logging.info(f"User ID: {user_id}") 
+            if event_type == "message" and text == "hello":
+                try:
+                    # Log user_id before fetching user info
+                    logging.info(f"User ID: {user_id}") 
 
-                user_info = web_client.users_info(user=user_id)
-                user_name = user_info["user"]["real_name"]
+                    user_info = web_client.users_info(user=user_id)
+                    user_name = user_info["user"]["real_name"]
 
-                # Log user_name and channel_id before sending the message
-                logging.info(f"User Name: {user_name}")
-                logging.info(f"Channel ID: {channel_id}")
+                    # Log user_name and channel_id before sending the message
+                    logging.info(f"User Name: {user_name}")
+                    logging.info(f"Channel ID: {channel_id}")
 
-                web_client.chat_postMessage(
-                    channel=channel_id,
-                    text=f"Hello, {user_name}! Nice one, I work as expected."
-                )
-                return jsonify({'status': 'ok'}), 200
+                    web_client.chat_postMessage(
+                        channel=channel_id,
+                        text=f"Hello, {user_name}! Nice one, I work as expected."
+                    )
+                    return jsonify({'status': 'ok'}), 200
 
-            except SlackApiError as e:
-                logging.error(f"Error responding to message: {e}")
-                return jsonify({"status": "error", "message": str(e)}), 500
+                except SlackApiError as e:
+                    logging.error(f"Error responding to message: {e}")
+                    return jsonify({"status": "error", "message": str(e)}), 500
 
     return jsonify({'status': 'event_not_processed'}), 400  
 
